@@ -1,5 +1,5 @@
 # REI Transaction Manager
-**Shorter Investments LLC** — Post-offer pipeline, automated timeline & email templates
+**JS Reality LLC** — Post-offer pipeline, automated timeline & email templates
 
 Reads Wisconsin purchase agreements (dotloop, Authentisign, any PDF) using Gemini AI and auto-extracts all contract fields.
 
