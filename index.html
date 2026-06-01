@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>REI Transaction Manager — Shorter Investments</title>
+<title>REI Transaction Manager — Jenean Shorter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs" type="module" id="pdfjs-script"></script>
@@ -527,7 +527,7 @@ input.prefilled { background: var(--brand3); border-color: #9FE1CB; }
       <div class="brand-icon">🏠</div>
       <div>
         <div class="brand-name">Transaction Manager</div>
-        <div class="brand-sub">Shorter Investments LLC</div>
+        <div class="brand-sub">Jenean Shorter</div>
       </div>
     </div>
     <div class="top-right">
@@ -653,6 +653,18 @@ function emptyDeal(addr = '') {
     created: new Date().toISOString()
   };
 }
+
+// ── Email Trigger Helper ──────────────────────────────────────────────────────
+window.openEmailClient = function(idx) {
+  const d = current();
+  if (!d || !d.emails[idx]) return;
+  const e = d.emails[idx];
+  
+  const subject = encodeURIComponent(e.subject);
+  const body = encodeURIComponent(e.body);
+  
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+};
 
 // ── Groq extraction ───────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are a real estate contract data extractor.
@@ -959,11 +971,11 @@ function buildTimeline(d) {
   const insp = parseInt(d.inspDays) || 12;
   const appr = parseInt(d.apprDays) || 23;
   const fin  = parseInt(d.finDays)  || 25;
+  const isCondo = Boolean(d.unit || d.condo);
 
   const items = [
     { task: 'Send welcome emails to buyer & seller',            date: addDays(b,1),       pri:'high',     resp:'Agent',          agent:true },
     { task: 'Order title commitment',                           date: addDays(b,1),       pri:'high',     resp:'Agent',          agent:true },
-    { task: 'Deliver condo disclosure materials to buyer',      date: addDays(b,2),       pri:'high',     resp:'Seller' },
     { task: 'Coordinate with lender',                           date: addDays(b,2),       pri:'medium',   resp:'Agent',          agent:true },
     { task: 'Schedule home inspection',                         date: addDays(b,2),       pri:'high',     resp:'Buyer' },
     { task: `Inspection deadline — day ${insp}`,                date: addDays(b,insp),    pri:'critical', resp:'Buyer' },
@@ -976,10 +988,22 @@ function buildTimeline(d) {
     { task: 'CLOSING DAY',                                      date: cl,                 pri:'critical', resp:'All Parties' },
   ];
 
+  // Add condo disclosure task ONLY if it is a condo
+  if (isCondo) {
+    items.push({ task: 'Deliver condo disclosure materials to buyer', date: addDays(b,2), pri:'high', resp:'Seller' });
+  }
+
   // Add special addendum terms if present
   if (d.additionalTerms) {
     items.push({ task: `⚡ Addendum: ${d.additionalTerms.slice(0, 80)}`, date: addDays(cl,-3), pri:'high', resp:'Seller', special:true });
   }
+
+  // Add post-closing tasks
+  items.push(
+    { task: 'Send Post-Closing Move-in Guide',                  date: addDays(cl, 1),     pri:'medium',   resp:'Agent',          agent:true },
+    { task: '30-Day Check-in with Buyer',                       date: addDays(cl, 30),    pri:'low',      resp:'Agent',          agent:true },
+    { task: 'Send Homestead Exemption Reminder',                date: addDays(cl, 180),   pri:'low',      resp:'Agent',          agent:true }
+  );
 
   return items.sort((a, b) => new Date(a.date) - new Date(b.date));
 }
@@ -996,7 +1020,36 @@ function buildEmails(d) {
   const appr   = parseInt(d.apprDays) || 23;
   const inspDl = d.acceptDate ? fmtDate(addDays(d.acceptDate, insp)) : 'TBD';
   const finDl  = d.acceptDate ? fmtDate(addDays(d.acceptDate, fin))  : 'TBD';
-  const condoLine = (d.unit || d.condo) ? `Unit ${d.unit || ''}, ${d.condo || 'Condominium'}` : '';
+
+  const isCondo = Boolean(d.unit || d.condo);
+  const condoLine = isCondo ? `Unit ${d.unit || ''}, ${d.condo || 'Condominium'}` : '';
+  const signature = `If you have any questions, please feel free to reach out!\n\nBest regards,\nJenean Shorter\n414-737-5160\njenean@actshousing.org`;
+
+  // Dynamically build the buyer's next steps to keep numbering sequential
+  const buyerSteps = [
+    'Schedule your home inspection immediately',
+    `Contact your lender${loan ? ' — loan amount ' + loan + (d.loanType ? ', ' + d.loanType : '') + (d.loanRate ? ' @ ' + d.loanRate + '%' : '') : ''}`
+  ];
+  if (isCondo) buyerSteps.push('Review condo disclosure materials from seller (due within 10 days)');
+  buyerSteps.push(`Earnest money: ${d.earnest ? '$' + Number(d.earnest).toLocaleString() : 'per contract terms'}`);
+  const buyerStepsText = buyerSteps.map((step, i) => `${i + 1}. ${step}`).join('\n');
+
+  // Dynamically build seller obligations list
+  const sellerObs = [];
+  if (isCondo) sellerObs.push('Deliver condo disclosure materials to buyer within 10 days of acceptance');
+  sellerObs.push('Keep utilities on through closing', 'Maintain property in current condition');
+  if (d.additionalTerms) sellerObs.push(`Addendum terms: ${d.additionalTerms}`);
+  const sellerObsText = sellerObs.map(obs => `• ${obs}`).join('\n');
+
+  // Dynamically build agent deadline checklist
+  const agentDeadlines = [];
+  if (isCondo) agentDeadlines.push(`□ Condo disclosures to buyer:    ${d.acceptDate ? fmtDate(addDays(d.acceptDate,10)) : 'day 10'}`);
+  agentDeadlines.push(
+    `□ Inspection deadline:           ${inspDl} (day ${insp})`,
+    `□ Appraisal deadline:            ${d.acceptDate ? fmtDate(addDays(d.acceptDate,appr)) : 'day '+appr} (day ${appr})`,
+    `□ Financing commitment:          ${finDl} (day ${fin})`
+  );
+  const agentDeadlinesText = agentDeadlines.map(dl => `  ${dl}`).join('\n');
 
   return [
     {
@@ -1012,10 +1065,7 @@ IMPORTANT DEADLINES:
 • Closing date:              ${d.closeDate ? fmtDate(d.closeDate) : 'TBD'}
 
 NEXT STEPS:
-1. Schedule your home inspection immediately
-2. Contact your lender${loan ? ' — loan amount ' + loan + (d.loanType ? ', ' + d.loanType : '') + (d.loanRate ? ' @ ' + d.loanRate + '%' : '') : ''}
-3. Review condo disclosure materials from seller (due within 10 days)
-4. Earnest money: ${d.earnest ? '$' + Number(d.earnest).toLocaleString() : 'per contract terms'}
+${buyerStepsText}
 ${d.additionalTerms ? '\nSPECIAL TERMS:\n' + d.additionalTerms : ''}
 HUD-APPROVED HOUSING COUNSELING RESOURCES:
 • ACTS Housing             (414) 937-9295
@@ -1023,8 +1073,7 @@ HUD-APPROVED HOUSING COUNSELING RESOURCES:
 • HIR                      (414) 264-2622
 • GreenPath Financial      (877) 337-3399
 
-Best regards,
-Your Real Estate Team`
+${signature}`
     },
     {
       title: '✉️ Welcome — Seller',
@@ -1039,13 +1088,9 @@ KEY DATES:
 • Closing date:                  ${d.closeDate ? fmtDate(d.closeDate) : 'TBD'}
 
 SELLER OBLIGATIONS:
-• Deliver condo disclosure materials to buyer within 10 days of acceptance
-• Keep utilities on through closing
-• Maintain property in current condition
-${d.additionalTerms ? '• Addendum terms: ' + d.additionalTerms : ''}
+${sellerObsText}
 
-Best regards,
-Your Real Estate Team`
+${signature}`
     },
     {
       title: '📋 Agent Internal Checklist',
@@ -1070,10 +1115,7 @@ IMMEDIATE (24–48 hrs):
   □ Set up transaction coordinator file
 
 DEADLINES:
-  □ Condo disclosures to buyer:    ${d.acceptDate ? fmtDate(addDays(d.acceptDate,10)) : 'day 10'}
-  □ Inspection deadline:           ${inspDl} (day ${insp})
-  □ Appraisal deadline:            ${d.acceptDate ? fmtDate(addDays(d.acceptDate,appr)) : 'day '+appr} (day ${appr})
-  □ Financing commitment:          ${finDl} (day ${fin})
+${agentDeadlinesText}
 ${d.additionalTerms ? '\nSPECIAL ADDENDUM:\n  □ ' + d.additionalTerms : ''}
 CLOSING PREP (1 week before):
   □ Final walk-through scheduled   (${d.closeDate ? fmtDate(addDays(d.closeDate,-1)) : 'day before closing'})
@@ -1097,8 +1139,7 @@ Resources:
 • HIR                 (414) 264-2622
 • GreenPath Financial (877) 337-3399
 
-Best regards,
-Your Real Estate Team`
+${signature}`
     },
     {
       title: '💰 Financing Deadline Reminder',
@@ -1119,8 +1160,36 @@ Resources:
 • GreenPath Financial  (877) 337-3399
 • ACTS Housing         (414) 937-9295
 
-Best regards,
-Your Real Estate Team`
+${signature}`
+    },
+    {
+      title: '🎉 Post-Closing — Buyer Utility & Move-in Guide',
+      subject: `Welcome to your new home at ${addr}! Next steps & Utilities`,
+      body: `Dear ${buyer},
+
+Congratulations again on a successful closing! It was a pleasure helping you secure ${addr}.
+
+As you get settled in, here is a quick checklist of immediate next steps:
+1. Change the locks: It is always best practice to rekey or replace exterior locks immediately.
+2. Set up utilities: Ensure you contact We Energies for gas/electric and Milwaukee Water Works to transfer service into your name.
+3. Forward mail: Update your address with USPS.
+4. Tax Exemption: Keep an eye out early next year to file your Homestead Exemption to lower your property taxes!
+
+${signature}`
+    },
+    {
+      title: '🌟 Post-Closing — Seller Thank You & Review',
+      subject: `Thank you for trusting us with ${addr}!`,
+      body: `Dear ${seller},
+
+Congratulations on a successful closing! Thank you so much for trusting me to handle the sale of ${addr}.
+
+It was a pleasure working with you. If you have a spare moment, I would incredibly appreciate a brief review of your experience working together. It helps tremendously.
+[Insert Review Link Here]
+
+I wish you the absolute best in your next chapter. Please stay in touch!
+
+${signature}`
     }
   ];
 }
@@ -1141,7 +1210,7 @@ window.generateAll = function() {
 window.exportICS = function() {
   const d = current();
   if (!d || !d.timeline.length) { alert('Generate a timeline first.'); return; }
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Shorter Investments//REI//EN'];
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Jenean Shorter//REI//EN'];
   d.timeline.forEach(item => {
     const dt = item.date.replace(/-/g, '');
     lines.push('BEGIN:VEVENT',
@@ -1428,7 +1497,8 @@ window.renderDealScreen = function(activeTab) {
           <div class="email-subject">Subject: ${e.subject}</div>
           <div class="email-body">${e.body}</div>
           <div class="email-actions">
-            <button class="btn-secondary btn-sm copy-btn" onclick="copyEmail(${i})">📋 Copy</button>
+            <button class="btn-primary btn-sm" onclick="openEmailClient(${i})">✉️ Open Email App</button>
+            <button class="btn-secondary btn-sm copy-btn" onclick="copyEmail(${i})">📋 Copy text</button>
           </div>
         </div>`).join('')}`;
   }
