@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REI Transaction Manager — Shorter Investments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs" type="module" id="pdfjs-script"></script>
+
+<style>
+/* ── Reset & base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:       #0D1A14;
+  --ink2:      #3A4D43;
+  --ink3:      #6B7F74;
+  --ink4:      #9DAAA3;
+  --paper:     #F5F3EE;
+  --paper2:    #ECEAE4;
+  --paper3:    #E2DFD8;
+  --brand:     #166A46;
+  --brand2:    #1F8A5A;
+  --brand3:    #D6F0E4;
+  --gold:      #C8900A;
+  --gold2:     #FDF3DC;
+  --red:       #C0392B;
+  --red2:      #FDECEA;
+  --amber:     #D97706;
+  --amber2:    #FEF3C7;
+  --r:         8px;
+  --r-sm:      5px;
+  --r-lg:      12px;
+  --shadow:    0 1px 3px rgba(13,26,20,.08), 0 4px 16px rgba(13,26,20,.04);
+  --shadow-md: 0 4px 12px rgba(13,26,20,.12), 0 12px 32px rgba(13,26,20,.06);
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── Layout ── */
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+.topbar {
+  background: var(--ink);
+  color: #fff;
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon {
+  width: 32px; height: 32px;
+  background: var(--brand2);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.brand-name { font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+.brand-sub  { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 1px; }
+
+.top-right { display: flex; align-items: center; gap: 8px; }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+
+.sidebar {
+  width: 232px;
+  flex-shrink: 0;
+  background: #fff;
+  border-right: 1px solid var(--paper3);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-head {
+  padding: 14px 16px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.deal-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all .12s;
+}
+.deal-item:hover { background: var(--paper); }
+.deal-item.active {
+  background: var(--brand3);
+  border-left-color: var(--brand);
+}
+.deal-addr { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.deal-meta { font-size: 11px; color: var(--ink3); margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+.stage-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.no-deals { padding: 16px; font-size: 12px; color: var(--ink4); text-align: center; }
+
+.main { flex: 1; overflow-y: auto; padding: 24px; }
+
+/* ── Buttons ── */
+button { cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .13s; border-radius: var(--r-sm); font-size: 13px; }
+
+.btn-primary {
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  padding: 9px 18px;
+  font-weight: 500;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary:hover { background: var(--brand2); }
+.btn-primary:disabled { opacity: .5; pointer-events: none; }
+
+.btn-secondary {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--paper3);
+  padding: 8px 14px;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-secondary:hover { background: var(--paper); border-color: var(--paper3); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink3);
+  border: none;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.btn-ghost:hover { color: var(--ink); background: var(--paper); border-radius: var(--r-sm); }
+
+.btn-danger {
+  background: transparent;
+  color: var(--red);
+  border: 1px solid #f5c6c2;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.btn-danger:hover { background: var(--red2); }
+
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-icon { padding: 6px 8px; }
+
+/* ── Upload area ── */
+.upload-zone {
+  border: 2px dashed var(--paper3);
+  border-radius: var(--r-lg);
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .15s;
+  background: #fff;
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.drag { border-color: var(--brand); background: var(--brand3); }
+.upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload-icon { font-size: 36px; margin-bottom: 12px; }
+.upload-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+.upload-sub { font-size: 13px; color: var(--ink3); line-height: 1.6; }
+.upload-free { display: inline-block; margin-top: 10px; background: var(--brand3); color: var(--brand); font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 99px; }
+
+/* ── Cards & sections ── */
+.card {
+  background: #fff;
+  border: 1px solid var(--paper3);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink4);
+  margin-bottom: 14px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.summary-cell {
+  background: var(--paper);
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+}
+.summary-cell.span2 { grid-column: 1 / -1; }
+.summary-label { font-size: 10px; color: var(--ink4); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+.summary-val { font-size: 14px; font-weight: 500; }
+.summary-val.green { color: var(--brand); font-family: 'DM Mono', monospace; }
+.summary-val.sm { font-size: 12px; }
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--paper3);
+  margin-bottom: 20px;
+}
+.tab {
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  color: var(--ink3);
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  border-radius: 0;
+}
+.tab:hover { color: var(--ink); }
+.tab.on { color: var(--brand); border-bottom-color: var(--brand); font-weight: 500; }
+
+.panel { display: none; }
+.panel.on { display: block; }
+
+/* ── Form ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fg { display: flex; flex-direction: column; gap: 5px; }
+.fg.full { grid-column: 1 / -1; }
+label { font-size: 11px; font-weight: 600; color: var(--ink3); text-transform: uppercase; letter-spacing: .05em; }
+input[type=text], input[type=date], input[type=number], input[type=password] {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 8px 11px;
+  border: 1px solid var(--paper3);
+  border-radius: var(--r-sm);
+  background: #fff;
+  color: var(--ink);
+  transition: border-color .12s, box-shadow .12s;
+  width: 100%;
+}
+input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(22,106,70,.12); }
+input.prefilled { background: var(--brand3); border-color: #9FE1CB; }
+
+/* ── Status banners ── */
+.banner {
+  padding: 11px 14px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.banner.success { background: var(--brand3); color: #0B4F33; border: 1px solid #9FE1CB; }
+.banner.warning { background: var(--amber2); color: #7C4A00; border: 1px solid #FBBF24; }
+.banner.error   { background: var(--red2);   color: #7B1A12; border: 1px solid #f5c6c2; }
+.banner.info    { background: #EEF4FF;        color: #1E40AF; border: 1px solid #BFDBFE; }
+.banner-icon { flex-shrink: 0; font-size: 15px; }
+
+/* ── Extraction result ── */
+.extract-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 14px 0;
+}
+.ef {
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  border: 1px solid var(--paper3);
+}
+.ef-label { font-size: 10px; color: var(--ink4); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+.ef-val { font-size: 13px; font-weight: 500; }
+.ef-val.found { color: var(--brand); }
+.ef-val.missing { color: var(--ink4); font-weight: 400; font-style: italic; font-size: 12px; }
+
+/* ── Progress ── */
+.progress-wrap { margin: 10px 0; }
+.progress-bar { height: 3px; background: var(--paper3); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--brand); border-radius: 99px; transition: width .3s; }
+.progress-label { font-size: 11px; color: var(--ink3); margin-top: 5px; font-family: 'DM Mono', monospace; }
+
+/* ── Timeline ── */
+.tl-list { display: flex; flex-direction: column; gap: 5px; }
+.tl-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 10px 13px;
+  border-radius: var(--r-sm);
+  background: #fff;
+  border: 1px solid var(--paper3);
+  border-left-width: 3px;
+}
+.tl-row.critical { border-left-color: var(--red); }
+.tl-row.high     { border-left-color: var(--amber); }
+.tl-row.medium   { border-left-color: var(--brand); }
+.tl-row.low      { border-left-color: var(--paper3); }
+.tl-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--ink3); min-width: 76px; padding-top: 2px; flex-shrink: 0; }
+.tl-task { font-size: 13px; font-weight: 500; }
+.tl-resp { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 99px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.b-critical { background: var(--red2); color: var(--red); }
+.b-high     { background: var(--amber2); color: var(--amber); }
+.b-medium   { background: var(--brand3); color: var(--brand); }
+.b-low      { background: var(--paper2); color: var(--ink3); }
+.b-agent    { background: #EEF4FF; color: #1E40AF; }
+.b-special  { background: var(--gold2); color: var(--gold); }
+
+/* ── Emails ── */
+.email-card {
+  background: #fff;
+  border: 1px solid var(--paper3);
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.email-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.email-subject { font-size: 12px; color: var(--ink3); margin-bottom: 10px; }
+.email-body {
+  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  white-space: pre-wrap;
+  line-height: 1.7;
+  background: var(--paper);
+  padding: 12px;
+  border-radius: var(--r-sm);
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--paper3);
+}
+.email-actions { display: flex; gap: 6px; margin-top: 10px; }
+
+/* ── Pipeline ── */
+.pipeline { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; }
+.pipe-col {
+  flex: 1;
+  min-width: 160px;
+  background: var(--paper);
+  border-radius: var(--r-lg);
+  padding: 12px;
+  border: 1px solid var(--paper3);
+}
+.pipe-head {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink3);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pipe-count {
+  background: #fff;
+  border: 1px solid var(--paper3);
+  border-radius: 99px;
+  font-size: 11px;
+  padding: 1px 7px;
+  color: var(--ink3);
+}
+.pipe-card {
+  background: #fff;
+  border: 1px solid var(--paper3);
+  border-radius: var(--r-sm);
+  padding: 9px 11px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: border-color .12s, box-shadow .12s;
+}
+.pipe-card:hover { border-color: var(--brand); box-shadow: 0 2px 8px rgba(22,106,70,.1); }
+.pipe-addr { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pipe-buyer { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+.pipe-price { font-size: 11px; color: var(--brand); font-family: 'DM Mono', monospace; font-weight: 500; margin-top: 2px; }
+.pipe-moves { display: flex; gap: 4px; margin-top: 7px; flex-wrap: wrap; }
+.pipe-move {
+  font-size: 10px;
+  background: var(--paper);
+  border: 1px solid var(--paper3);
+  color: var(--ink3);
+  padding: 2px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .1s;
+}
+.pipe-move:hover { background: var(--brand3); color: var(--brand); border-color: #9FE1CB; }
+
+/* ── API key modal ── */
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(13,26,20,.5);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: #fff;
+  border-radius: var(--r-lg);
+  padding: 24px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: var(--shadow-md);
+}
+.modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.modal p { font-size: 13px; color: var(--ink3); margin-bottom: 16px; line-height: 1.6; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+/* ── Welcome screen ── */
+.welcome {
+  max-width: 520px;
+  margin: 48px auto;
+  text-align: center;
+}
+.welcome-icon { font-size: 48px; margin-bottom: 16px; }
+.welcome h2 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+.welcome p { font-size: 14px; color: var(--ink3); margin-bottom: 24px; line-height: 1.7; }
+.how-it-works {
+  background: #fff;
+  border: 1px solid var(--paper3);
+  border-radius: var(--r-lg);
+  padding: 18px 20px;
+  text-align: left;
+  margin: 20px 0;
+}
+.how-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.5;
+}
+.step-num {
+  width: 22px;
+  height: 22px;
+  background: var(--brand3);
+  color: var(--brand);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Spinner ── */
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Misc ── */
+.row { display: flex; align-items: center; gap: 10px; }
+.spacer { flex: 1; }
+.text-sm { font-size: 12px; }
+.text-muted { color: var(--ink3); }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mb-12 { margin-bottom: 12px; }
+.mb-16 { margin-bottom: 16px; }
+.key-indicator {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.key-set { background: var(--brand3); color: var(--brand); }
+.key-missing { background: var(--red2); color: var(--red); }
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">🏠</div>
+      <div>
+        <div class="brand-name">Transaction Manager</div>
+        <div class="brand-sub">Shorter Investments LLC</div>
+      </div>
+    </div>
+    <div class="top-right">
+      <span id="key-badge" class="key-indicator key-missing" onclick="openKeyModal()">⚙ API Key</span>
+      <button class="btn-secondary btn-sm" onclick="showNewDealModal()">+ New Deal</button>
+      <label class="btn-primary btn-sm" style="cursor:pointer">
+        📄 Upload PDF
+        <input type="file" id="main-upload" accept=".pdf,.txt" style="display:none" onchange="handleUpload(event)">
+      </label>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-head">
+        Deals
+        <button class="btn-ghost btn-icon" onclick="showNewDealModal()" title="New deal">＋</button>
+      </div>
+      <div id="deal-list"></div>
+      <div id="no-deals-msg" class="no-deals" style="display:none">No deals yet.<br>Upload a PDF to start.</div>
+    </div>
+
+    <!-- Main content -->
+    <div class="main" id="main-content">
+      <!-- Filled by JS -->
+    </div>
+
+  </div>
+</div>
+
+<!-- API Key Modal -->
+<div class="modal-backdrop" id="key-modal">
+  <div class="modal">
+    <h3>🔑 Gemini API Key</h3>
+    <p>
+      Your key is saved in your browser only — never sent anywhere except Google's API.<br><br>
+      Get a <strong>free key</strong> at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--brand)">aistudio.google.com</a> — 1,500 free requests/day, no credit card needed.
+    </p>
+    <div class="fg">
+      <label>Gemini API Key</label>
+      <input type="password" id="key-input" placeholder="AIza..." autocomplete="off">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeKeyModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveKey()">Save Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Deal Modal -->
+<div class="modal-backdrop" id="new-deal-modal">
+  <div class="modal">
+    <h3>New Deal</h3>
+    <p>Create a blank deal, then upload a PDF or fill in details manually.</p>
+    <div class="fg">
+      <label>Property address (optional)</label>
+      <input type="text" id="new-deal-addr" placeholder="e.g. 10120 W Kiehnau Ave, Milwaukee WI">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeNewDealModal()">Cancel</button>
+      <button class="btn-primary" onclick="createDeal()">Create Deal</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// ── PDF.js setup ──────────────────────────────────────────────────────────────
+let pdfjsLib = null;
+async function initPDFJS() {
+  try {
+    const mod = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs');
+    pdfjsLib = mod;
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
+  } catch(e) {
+    console.warn('PDF.js failed to load:', e);
+  }
+}
+initPDFJS();
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const LS_DEALS = 'rei_deals_v3';
+const LS_KEY   = 'rei_gemini_key';
+const STAGES   = ['active','under_contract','clear_to_close','closed'];
+const STAGE_LABELS = {
+  active: 'Active',
+  under_contract: 'Under Contract',
+  clear_to_close: 'Clear to Close',
+  closed: 'Closed'
+};
+const STAGE_COLORS = {
+  active: '#378ADD',
+  under_contract: '#1D9E75',
+  clear_to_close: '#639922',
+  closed: '#9DAAA3'
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let deals = [];
+let currentId = null;
+let extractedPreview = null;
+
+function load()  { try { deals = JSON.parse(localStorage.getItem(LS_DEALS) || '[]'); } catch { deals = []; } }
+function persist() { try { localStorage.setItem(LS_DEALS, JSON.stringify(deals)); } catch {} }
+function getKey()  { return localStorage.getItem(LS_KEY) || ''; }
+function uid()     { return 'deal_' + Date.now() + '_' + Math.random().toString(36).slice(2,5); }
+function current() { return deals.find(d => d.id === currentId) || null; }
+
+// ── Empty deal factory ────────────────────────────────────────────────────────
+function emptyDeal(addr = '') {
+  return {
+    id: uid(), stage: 'active',
+    address: addr, unit: '', condo: '',
+    buyer: '', seller: '', price: '', earnest: '',
+    loanAmount: '', loanType: '', loanRate: '',
+    acceptDate: '', closeDate: '',
+    inspDays: '12', apprDays: '23', finDays: '25',
+    additionalTerms: '',
+    timeline: [], emails: [],
+    created: new Date().toISOString()
+  };
+}
+
+// ── Gemini extraction ─────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are a real estate contract data extractor.
+Extract these fields from the Wisconsin purchase agreement text below.
+Return ONLY a valid JSON object — no markdown, no explanation.
+
+Fields:
+- address: full street address string
+- unit: unit number if condo
+- condo: condominium name if applicable  
+- buyer: full buyer name(s)
+- seller: full seller name(s)
+- price: sale price digits only (e.g. "120000")
+- earnest: earnest money digits only
+- loanAmount: loan amount digits only
+- loanType: loan type (e.g. "conventional", "FHA", "VA")
+- loanRate: interest rate as string (e.g. "6.25")
+- acceptDate: YYYY-MM-DD or "" if not found
+- closeDate: YYYY-MM-DD or "" if not found
+- inspDays: inspection period days as string integer
+- apprDays: appraisal deadline days as string integer
+- finDays: financing deadline days as string integer
+- additionalTerms: any special addendum terms (e.g. repair requirements)
+
+Rules:
+- Use "" for any field not found
+- Dates MUST be YYYY-MM-DD format
+- Price/money fields: digits only, no $ or commas
+- Days fields: plain integer string only`;
+
+async function callGemini(text) {
+  const apiKey = getKey();
+  if (!apiKey) throw new Error('NO_KEY');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+  const body = {
+    contents: [{
+      parts: [{
+        text: SYSTEM_PROMPT + '\n\nCONTRACT TEXT:\n' + text.slice(0, 60000)
+      }]
+    }],
+    generationConfig: {
+      temperature: 0,
+      responseMimeType: 'application/json'
+    }
+  };
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    const msg = err?.error?.message || `HTTP ${resp.status}`;
+    if (resp.status === 400 && msg.includes('API_KEY')) throw new Error('BAD_KEY');
+    if (resp.status === 429) throw new Error('QUOTA');
+    throw new Error(msg);
+  }
+
+  const data = await resp.json();
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const clean = raw.replace(/```json|```/gi, '').trim();
+  return JSON.parse(clean);
+}
+
+// ── PDF text extraction ───────────────────────────────────────────────────────
+async function extractPDFText(file) {
+  if (!pdfjsLib) throw new Error('PDF.js not loaded');
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+  let text = '';
+  const pages = Math.min(pdf.numPages, 15);
+  for (let i = 1; i <= pages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.filter(it => it.str).map(it => it.str).join(' ') + '\n';
+  }
+  return text;
+}
+
+// ── Handle file upload ────────────────────────────────────────────────────────
+window.handleUpload = async function(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  e.target.value = '';
+
+  if (!getKey()) {
+    openKeyModal();
+    showBanner('warning', '⚠️ Set your Gemini API key first, then upload again.');
+    return;
+  }
+
+  // Ensure we have an active deal
+  if (!currentId) {
+    const d = emptyDeal();
+    deals.unshift(d);
+    currentId = d.id;
+    persist();
+  }
+
+  renderSidebar();
+  showExtracting();
+
+  let text = '';
+  try {
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      updateProgress(20, 'Reading PDF pages…');
+      text = await extractPDFText(file);
+      updateProgress(50, 'Text extracted — sending to Gemini…');
+    } else {
+      text = await file.text();
+      updateProgress(50, 'Sending to Gemini…');
+    }
+
+    if (!text.trim() || text.trim().length < 50) {
+      showExtractFailed('No readable text found in this PDF. It may be a scanned image. Try: File → Print → Save as PDF (to create a text PDF), or copy/paste text into a .txt file.');
+      return;
+    }
+
+    updateProgress(70, 'Gemini is reading the contract…');
+    const result = await callGemini(text);
+    updateProgress(100, 'Done!');
+
+    extractedPreview = result;
+    showExtractResult(result);
+
+  } catch(err) {
+    if (err.message === 'NO_KEY') {
+      showExtractFailed('No API key set. Click "⚙ API Key" at the top to add your free Gemini key.');
+    } else if (err.message === 'BAD_KEY') {
+      showExtractFailed('Invalid API key. Double-check it at aistudio.google.com/app/apikey');
+    } else if (err.message === 'QUOTA') {
+      showExtractFailed('Gemini free quota exceeded (1,500/day). Try again tomorrow or upgrade.');
+    } else {
+      showExtractFailed('Extraction error: ' + err.message);
+    }
+  }
+};
+
+// ── Extraction UI ─────────────────────────────────────────────────────────────
+function showExtracting() {
+  renderDealScreen('extract');
+  document.getElementById('extract-idle').style.display = 'none';
+  document.getElementById('extract-processing').style.display = 'block';
+  document.getElementById('extract-result').style.display = 'none';
+  document.getElementById('extract-fail').style.display = 'none';
+}
+
+function updateProgress(pct, label) {
+  const fill = document.getElementById('prog-fill');
+  const lbl  = document.getElementById('prog-label');
+  if (fill) fill.style.width = pct + '%';
+  if (lbl) lbl.textContent = label;
+}
+
+function showExtractResult(r) {
+  document.getElementById('extract-processing').style.display = 'none';
+  document.getElementById('extract-result').style.display = 'block';
+
+  const fields = [
+    { k: 'address',    label: 'Property Address' },
+    { k: 'unit',       label: 'Unit #' },
+    { k: 'condo',      label: 'Condominium' },
+    { k: 'buyer',      label: 'Buyer' },
+    { k: 'seller',     label: 'Seller' },
+    { k: 'price',      label: 'Sale Price' },
+    { k: 'earnest',    label: 'Earnest Money' },
+    { k: 'loanAmount', label: 'Loan Amount' },
+    { k: 'loanType',   label: 'Loan Type' },
+    { k: 'loanRate',   label: 'Interest Rate' },
+    { k: 'acceptDate', label: 'Acceptance Date' },
+    { k: 'closeDate',  label: 'Closing Date' },
+    { k: 'inspDays',   label: 'Inspection Days' },
+    { k: 'apprDays',   label: 'Appraisal Days' },
+    { k: 'finDays',    label: 'Financing Days' },
+  ];
+
+  const found = fields.filter(f => r[f.k]).length;
+  const total = fields.length;
+
+  document.getElementById('extract-summary-text').textContent =
+    `Extracted ${found} of ${total} fields — review below and click "Apply to Deal"`;
+
+  document.getElementById('extract-fields-grid').innerHTML = fields.map(f => `
+    <div class="ef">
+      <div class="ef-label">${f.label}</div>
+      <div class="ef-val ${r[f.k] ? 'found' : 'missing'}">${r[f.k] || 'Not found'}</div>
+    </div>`).join('');
+
+  if (r.additionalTerms) {
+    document.getElementById('extract-addl').style.display = 'block';
+    document.getElementById('extract-addl-text').textContent = r.additionalTerms;
+  }
+}
+
+function showExtractFailed(msg) {
+  document.getElementById('extract-processing').style.display = 'none';
+  document.getElementById('extract-fail').style.display = 'block';
+  document.getElementById('extract-fail-msg').textContent = msg;
+}
+
+window.applyExtracted = function() {
+  if (!extractedPreview || !currentId) return;
+  const d = current();
+  if (!d) return;
+  Object.assign(d, extractedPreview);
+  persist();
+  renderDealScreen('details');
+  fillForm();
+};
+
+// ── Deal management ───────────────────────────────────────────────────────────
+window.showNewDealModal = function() {
+  document.getElementById('new-deal-modal').classList.add('open');
+  document.getElementById('new-deal-addr').value = '';
+  setTimeout(() => document.getElementById('new-deal-addr').focus(), 100);
+};
+window.closeNewDealModal = function() {
+  document.getElementById('new-deal-modal').classList.remove('open');
+};
+window.createDeal = function() {
+  const addr = document.getElementById('new-deal-addr').value.trim();
+  closeNewDealModal();
+  const d = emptyDeal(addr);
+  deals.unshift(d);
+  currentId = d.id;
+  persist();
+  render();
+  renderDealScreen('extract');
+};
+
+window.selectDeal = function(id) {
+  currentId = id;
+  render();
+  renderDealScreen('details');
+};
+
+window.deleteDeal = function(id) {
+  if (!confirm('Delete this deal?')) return;
+  deals = deals.filter(d => d.id !== id);
+  if (currentId === id) currentId = deals[0]?.id || null;
+  persist();
+  render();
+};
+
+window.moveDeal = function(id, stage) {
+  const d = deals.find(x => x.id === id);
+  if (d) { d.stage = stage; persist(); renderPipeline(); }
+};
+
+// ── Form ──────────────────────────────────────────────────────────────────────
+function fillForm() {
+  const d = current();
+  if (!d) return;
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) { el.value = val || ''; if (val) el.classList.add('prefilled'); }
+  };
+  set('f-address', d.address);  set('f-unit', d.unit);
+  set('f-condo', d.condo);      set('f-buyer', d.buyer);
+  set('f-seller', d.seller);    set('f-price', d.price);
+  set('f-earnest', d.earnest);  set('f-loan', d.loanAmount);
+  set('f-loantype', d.loanType);set('f-rate', d.loanRate);
+  set('f-accept', d.acceptDate);set('f-close', d.closeDate);
+  set('f-insp', d.inspDays);    set('f-appr', d.apprDays);
+  set('f-fin', d.finDays);
+  if (d.additionalTerms) {
+    const el = document.getElementById('f-addl');
+    if (el) { el.value = d.additionalTerms; }
+  }
+}
+
+function readForm() {
+  const d = current();
+  if (!d) return;
+  const g = id => (document.getElementById(id)?.value || '').trim();
+  d.address   = g('f-address'); d.unit    = g('f-unit');
+  d.condo     = g('f-condo');   d.buyer   = g('f-buyer');
+  d.seller    = g('f-seller');  d.price   = g('f-price').replace(/[^0-9]/g, '');
+  d.earnest   = g('f-earnest').replace(/[^0-9]/g, '');
+  d.loanAmount= g('f-loan').replace(/[^0-9]/g, '');
+  d.loanType  = g('f-loantype'); d.loanRate = g('f-rate');
+  d.acceptDate= g('f-accept');  d.closeDate= g('f-close');
+  d.inspDays  = g('f-insp');    d.apprDays = g('f-appr');
+  d.finDays   = g('f-fin');     d.additionalTerms = g('f-addl');
+  persist();
+}
+
+// ── Timeline builder ──────────────────────────────────────────────────────────
+function addDays(base, n) {
+  const d = new Date(base + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function fmtDate(iso) {
+  return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function buildTimeline(d) {
+  if (!d.acceptDate) return [];
+  const b    = d.acceptDate;
+  const cl   = d.closeDate || addDays(b, 45);
+  const insp = parseInt(d.inspDays) || 12;
+  const appr = parseInt(d.apprDays) || 23;
+  const fin  = parseInt(d.finDays)  || 25;
+
+  const items = [
+    { task: 'Send welcome emails to buyer & seller',            date: addDays(b,1),       pri:'high',     resp:'Agent',          agent:true },
+    { task: 'Order title commitment',                           date: addDays(b,1),       pri:'high',     resp:'Agent',          agent:true },
+    { task: 'Deliver condo disclosure materials to buyer',      date: addDays(b,2),       pri:'high',     resp:'Seller' },
+    { task: 'Coordinate with lender',                           date: addDays(b,2),       pri:'medium',   resp:'Agent',          agent:true },
+    { task: 'Schedule home inspection',                         date: addDays(b,2),       pri:'high',     resp:'Buyer' },
+    { task: `Inspection deadline — day ${insp}`,                date: addDays(b,insp),    pri:'critical', resp:'Buyer' },
+    { task: 'Follow up on inspection results',                  date: addDays(b,insp+1),  pri:'medium',   resp:'Agent',          agent:true },
+    { task: `Appraisal deadline — day ${appr}`,                 date: addDays(b,appr),    pri:'high',     resp:'Lender' },
+    { task: 'Monitor financing progress',                       date: addDays(b,fin-5),   pri:'high',     resp:'Agent',          agent:true },
+    { task: `Financing commitment deadline — day ${fin}`,       date: addDays(b,fin),     pri:'critical', resp:'Buyer/Lender' },
+    { task: 'Prepare closing checklist',                        date: addDays(cl,-3),     pri:'medium',   resp:'Agent',          agent:true },
+    { task: 'Final walk-through',                               date: addDays(cl,-1),     pri:'medium',   resp:'Buyer' },
+    { task: 'CLOSING DAY',                                      date: cl,                 pri:'critical', resp:'All Parties' },
+  ];
+
+  // Add special addendum terms if present
+  if (d.additionalTerms) {
+    items.push({ task: `⚡ Addendum: ${d.additionalTerms.slice(0, 80)}`, date: addDays(cl,-3), pri:'high', resp:'Seller', special:true });
+  }
+
+  return items.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+// ── Email builder ─────────────────────────────────────────────────────────────
+function buildEmails(d) {
+  const price  = d.price   ? '$' + Number(d.price).toLocaleString()   : '(price TBD)';
+  const loan   = d.loanAmount ? '$' + Number(d.loanAmount).toLocaleString() : '';
+  const addr   = d.address || 'the property';
+  const buyer  = d.buyer   || 'Buyer';
+  const seller = d.seller  || 'Seller';
+  const insp   = parseInt(d.inspDays) || 12;
+  const fin    = parseInt(d.finDays)  || 25;
+  const appr   = parseInt(d.apprDays) || 23;
+  const inspDl = d.acceptDate ? fmtDate(addDays(d.acceptDate, insp)) : 'TBD';
+  const finDl  = d.acceptDate ? fmtDate(addDays(d.acceptDate, fin))  : 'TBD';
+  const condoLine = (d.unit || d.condo) ? `Unit ${d.unit || ''}, ${d.condo || 'Condominium'}` : '';
+
+  return [
+    {
+      title: '✉️ Welcome — Buyer',
+      subject: `Congratulations! Your offer on ${addr} has been accepted`,
+      body: `Dear ${buyer},
+
+Congratulations! Your offer on ${addr}${condoLine ? ' (' + condoLine + ')' : ''} has been accepted for ${price}.
+
+IMPORTANT DEADLINES:
+• Inspection period ends:    ${inspDl} (day ${insp})
+• Financing commitment due:  ${finDl} (day ${fin})
+• Closing date:              ${d.closeDate ? fmtDate(d.closeDate) : 'TBD'}
+
+NEXT STEPS:
+1. Schedule your home inspection immediately
+2. Contact your lender${loan ? ' — loan amount ' + loan + (d.loanType ? ', ' + d.loanType : '') + (d.loanRate ? ' @ ' + d.loanRate + '%' : '') : ''}
+3. Review condo disclosure materials from seller (due within 10 days)
+4. Earnest money: ${d.earnest ? '$' + Number(d.earnest).toLocaleString() : 'per contract terms'}
+${d.additionalTerms ? '\nSPECIAL TERMS:\n' + d.additionalTerms : ''}
+HUD-APPROVED HOUSING COUNSELING RESOURCES:
+• ACTS Housing             (414) 937-9295
+• UCC (United Community)   (414) 384-3100
+• HIR                      (414) 264-2622
+• GreenPath Financial      (877) 337-3399
+
+Best regards,
+Your Real Estate Team`
+    },
+    {
+      title: '✉️ Welcome — Seller',
+      subject: `Your property at ${addr} is under contract`,
+      body: `Dear ${seller},
+
+Your property at ${addr}${condoLine ? ' (' + condoLine + ')' : ''} is now under contract for ${price}.
+
+KEY DATES:
+• Buyer's inspection deadline:   ${inspDl}
+• Financing commitment deadline: ${finDl}
+• Closing date:                  ${d.closeDate ? fmtDate(d.closeDate) : 'TBD'}
+
+SELLER OBLIGATIONS:
+• Deliver condo disclosure materials to buyer within 10 days of acceptance
+• Keep utilities on through closing
+• Maintain property in current condition
+${d.additionalTerms ? '• Addendum terms: ' + d.additionalTerms : ''}
+
+Best regards,
+Your Real Estate Team`
+    },
+    {
+      title: '📋 Agent Internal Checklist',
+      subject: `Action Items: ${addr} Under Contract`,
+      body: `INTERNAL CHECKLIST — ${addr}
+${'='.repeat(60)}
+
+CONTRACT DETAILS:
+  Property:    ${addr}${condoLine ? ' · ' + condoLine : ''}
+  Buyer:       ${buyer}
+  Seller:      ${seller}
+  Sale Price:  ${price}${loan ? '   Loan: ' + loan + (d.loanType ? ' ' + d.loanType : '') + (d.loanRate ? ' @ ' + d.loanRate + '%' : '') : ''}
+  Earnest:     ${d.earnest ? '$' + Number(d.earnest).toLocaleString() : '—'}
+  Acceptance:  ${d.acceptDate ? fmtDate(d.acceptDate) : '—'}
+  Closing:     ${d.closeDate  ? fmtDate(d.closeDate)  : '—'}
+
+IMMEDIATE (24–48 hrs):
+  □ Send welcome emails to buyer and seller
+  □ Order title commitment
+  □ Coordinate with buyer's lender
+  □ Schedule home inspection with buyer
+  □ Set up transaction coordinator file
+
+DEADLINES:
+  □ Condo disclosures to buyer:    ${d.acceptDate ? fmtDate(addDays(d.acceptDate,10)) : 'day 10'}
+  □ Inspection deadline:           ${inspDl} (day ${insp})
+  □ Appraisal deadline:            ${d.acceptDate ? fmtDate(addDays(d.acceptDate,appr)) : 'day '+appr} (day ${appr})
+  □ Financing commitment:          ${finDl} (day ${fin})
+${d.additionalTerms ? '\nSPECIAL ADDENDUM:\n  □ ' + d.additionalTerms : ''}
+CLOSING PREP (1 week before):
+  □ Final walk-through scheduled   (${d.closeDate ? fmtDate(addDays(d.closeDate,-1)) : 'day before closing'})
+  □ Closing documents reviewed
+  □ Funds verification complete
+  □ Keys / remotes ready`
+    },
+    {
+      title: '⏰ Inspection Reminder',
+      subject: `Action Required: Inspection Deadline in 3 Days`,
+      body: `Dear ${buyer},
+
+Your inspection period for ${addr} ends in 3 days on ${inspDl}.
+
+If you have not completed your inspection, please act immediately.
+
+IMPORTANT: Failing to deliver a Notice of Defects by ${inspDl} waives your right to inspection-related negotiations. The seller has the right to cure defects per the contract.
+
+Resources:
+• ACTS Housing        (414) 937-9295
+• HIR                 (414) 264-2622
+• GreenPath Financial (877) 337-3399
+
+Best regards,
+Your Real Estate Team`
+    },
+    {
+      title: '💰 Financing Deadline Reminder',
+      subject: `Financing Commitment Due in 5 Days — Action Required`,
+      body: `Dear ${buyer},
+
+Your financing commitment deadline for ${addr} is ${finDl}.
+
+Please contact your lender immediately to confirm status.
+${loan ? 'Loan details: ' + loan + (d.loanType ? ' · ' + d.loanType : '') + (d.loanRate ? ' · ' + d.loanRate + '% fixed' : '') : ''}
+
+ACTION ITEMS:
+  □ Contact lender for written commitment status
+  □ Provide any outstanding documentation
+  □ Notify us immediately of any potential delays
+
+Resources:
+• GreenPath Financial  (877) 337-3399
+• ACTS Housing         (414) 937-9295
+
+Best regards,
+Your Real Estate Team`
+    }
+  ];
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+window.generateAll = function() {
+  readForm();
+  const d = current();
+  if (!d) return;
+  if (!d.acceptDate) { alert('Please enter an acceptance date first.'); return; }
+  d.timeline = buildTimeline(d);
+  d.emails   = buildEmails(d);
+  persist();
+  renderDealScreen('timeline');
+};
+
+// ── ICS export ────────────────────────────────────────────────────────────────
+window.exportICS = function() {
+  const d = current();
+  if (!d || !d.timeline.length) { alert('Generate a timeline first.'); return; }
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Shorter Investments//REI//EN'];
+  d.timeline.forEach(item => {
+    const dt = item.date.replace(/-/g, '');
+    lines.push('BEGIN:VEVENT',
+      `DTSTART;VALUE=DATE:${dt}`, `DTEND;VALUE=DATE:${dt}`,
+      `SUMMARY:${item.task}`,
+      `DESCRIPTION:Responsible: ${item.resp} | Priority: ${item.pri}`,
+      `LOCATION:${d.address}`, 'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/calendar' }));
+  a.download = `timeline-${(d.address || 'deal').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.ics`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+
+// ── Print ─────────────────────────────────────────────────────────────────────
+window.doPrint = function() {
+  const d = current();
+  if (!d || (!d.timeline.length && !d.emails.length)) { alert('Generate timeline first.'); return; }
+  const css = `body{font-family:Arial,sans-serif;color:#111;margin:24px;max-width:720px}
+    h1{font-size:17px;margin:0 0 14px;border-bottom:2px solid #166A46;padding-bottom:6px}
+    h2{font-size:13px;margin:16px 0 6px;color:#444}
+    .r{display:flex;gap:12px;padding:9px 11px;border:1px solid #ddd;border-radius:5px;margin:5px 0;page-break-inside:avoid}
+    .r.critical{border-left:4px solid #C0392B}.r.high{border-left:4px solid #D97706}
+    .r.medium{border-left:4px solid #166A46}.r.low{border-left:4px solid #ddd}
+    .dt{min-width:88px;font-family:monospace;font-size:11px;color:#555;padding-top:1px}
+    .tk{font-size:13px;font-weight:600}.rp{font-size:11px;color:#666;margin-top:2px}
+    .ec{border:1px solid #ddd;padding:12px;border-radius:5px;margin:8px 0;page-break-inside:avoid}
+    pre{font-family:monospace;font-size:11px;white-space:pre-wrap;line-height:1.6}`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Timeline — ${d.address}</title><style>${css}</style></head><body>
+    <h1>Transaction Timeline — ${d.address}</h1>
+    ${d.timeline.map(i => `<div class="r ${i.pri}"><div class="dt">${fmtDate(i.date)}</div><div><div class="tk">${i.task}</div><div class="rp">${i.resp} · ${i.pri}</div></div></div>`).join('')}
+    <div style="page-break-after:always"></div>
+    <h1>Email Templates</h1>
+    ${d.emails.map(e => `<div class="ec"><h2>${e.title}</h2><pre>Subject: ${e.subject}\n\n${e.body}</pre></div>`).join('')}
+    </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { alert('Allow popups to print.'); return; }
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+};
+
+// ── Copy helpers ──────────────────────────────────────────────────────────────
+window.copyEmail = function(idx) {
+  const d = current();
+  if (!d || !d.emails[idx]) return;
+  const e = d.emails[idx];
+  navigator.clipboard.writeText(`Subject: ${e.subject}\n\n${e.body}`).then(() => {
+    const btn = document.querySelectorAll('.copy-btn')[idx];
+    if (btn) { btn.textContent = '✓ Copied'; setTimeout(() => btn.textContent = '📋 Copy', 1800); }
+  });
+};
+
+window.copyAllEmails = function() {
+  const d = current();
+  if (!d || !d.emails.length) return;
+  navigator.clipboard.writeText(d.emails.map(e => `Subject: ${e.subject}\n\n${e.body}`).join('\n\n---\n\n'));
+};
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const list = document.getElementById('deal-list');
+  const none = document.getElementById('no-deals-msg');
+  list.innerHTML = '';
+  if (!deals.length) { none.style.display = 'block'; return; }
+  none.style.display = 'none';
+  deals.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'deal-item' + (d.id === currentId ? ' active' : '');
+    el.innerHTML = `
+      <div class="deal-addr">${d.address || 'New Deal'}</div>
+      <div class="deal-meta">
+        <span class="stage-dot" style="background:${STAGE_COLORS[d.stage]}"></span>
+        ${STAGE_LABELS[d.stage]}
+      </div>`;
+    el.onclick = () => { window.selectDeal(d.id); };
+    list.appendChild(el);
+  });
+}
+
+function renderWelcome() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="welcome">
+      <div class="welcome-icon">🏡</div>
+      <h2>REI Transaction Manager</h2>
+      <p>Upload a Wisconsin purchase agreement PDF and Gemini AI will automatically extract all fields — no manual entry needed.</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <label class="btn-primary" style="cursor:pointer;padding:10px 20px">
+          📄 Upload offer PDF
+          <input type="file" accept=".pdf,.txt" style="display:none" onchange="handleUpload(event)">
+        </label>
+        <button class="btn-secondary" onclick="showNewDealModal()">+ New deal manually</button>
+      </div>
+      <div class="how-it-works mt-16">
+        <div class="section-title" style="margin-bottom:10px">How it works</div>
+        <div class="how-step"><div class="step-num">1</div>Get your free Gemini API key at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--brand)">aistudio.google.com</a> — takes 1 minute</div>
+        <div class="how-step"><div class="step-num">2</div>Click ⚙ API Key in the top bar and paste it in — saves to your browser</div>
+        <div class="how-step"><div class="step-num">3</div>Upload any Wisconsin purchase agreement PDF — dotloop, Authentisign, anything</div>
+        <div class="how-step"><div class="step-num">4</div>Gemini reads the contract and extracts all fields automatically</div>
+        <div class="how-step"><div class="step-num">5</div>Review, generate your timeline and emails, export to calendar</div>
+        <div class="how-step" style="margin-top:6px;padding-top:10px;border-top:1px solid var(--paper3)">
+          <div class="step-num" style="background:var(--brand3);color:var(--brand)">$</div>
+          <strong>1,500 free requests/day</strong>&nbsp;— a typical operation uses 3–5/day
+        </div>
+      </div>
+    </div>`;
+}
+
+window.renderDealScreen = function(activeTab) {
+  const d = current();
+  if (!d) { renderWelcome(); return; }
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="tabs">
+      <button class="tab ${activeTab==='extract' ?'on':''}"   onclick="renderDealScreen('extract')">Extraction</button>
+      <button class="tab ${activeTab==='details' ?'on':''}"   onclick="renderDealScreen('details')">Details</button>
+      <button class="tab ${activeTab==='timeline'?'on':''}"   onclick="renderDealScreen('timeline')">Timeline</button>
+      <button class="tab ${activeTab==='emails'  ?'on':''}"   onclick="renderDealScreen('emails')">Emails</button>
+      <button class="tab ${activeTab==='pipeline'?'on':''}"   onclick="renderDealScreen('pipeline')">Pipeline</button>
+    </div>
+    <div id="tab-body"></div>`;
+
+  const body = document.getElementById('tab-body');
+
+  if (activeTab === 'extract') {
+    body.innerHTML = `
+      <div id="extract-idle">
+        <div class="upload-zone" id="drop-zone">
+          <input type="file" accept=".pdf,.txt" onchange="handleUpload(event)">
+          <div class="upload-icon">📄</div>
+          <div class="upload-title">Drop your offer PDF here</div>
+          <div class="upload-sub">Wisconsin purchase agreements · dotloop · Authentisign · plain text<br>Gemini AI reads the contract and extracts all fields automatically</div>
+          <span class="upload-free">1,500 free requests/day</span>
+        </div>
+        <div class="banner info mt-16">
+          <span class="banner-icon">💡</span>
+          <span>Make sure you've set your <strong>Gemini API key</strong> — click ⚙ API Key at the top. It's free and takes 60 seconds to get.</span>
+        </div>
+      </div>
+      <div id="extract-processing" style="display:none">
+        <div class="card">
+          <div class="banner info" style="margin-bottom:14px">
+            <span class="spinner"></span>
+            <span id="prog-label">Reading PDF…</span>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+      <div id="extract-result" style="display:none">
+        <div class="banner success" id="extract-summary">
+          <span class="banner-icon">✅</span>
+          <span id="extract-summary-text"></span>
+        </div>
+        <div class="extract-grid" id="extract-fields-grid"></div>
+        <div id="extract-addl" style="display:none;margin-bottom:14px">
+          <div class="section-title">Additional / Addendum Terms</div>
+          <div class="card" id="extract-addl-text" style="font-size:13px;color:var(--ink2)"></div>
+        </div>
+        <div class="row">
+          <button class="btn-primary" onclick="applyExtracted()">✓ Apply to Deal</button>
+          <button class="btn-secondary" onclick="renderDealScreen('details')">✏️ Edit manually</button>
+        </div>
+      </div>
+      <div id="extract-fail" style="display:none">
+        <div class="banner error">
+          <span class="banner-icon">❌</span>
+          <span id="extract-fail-msg"></span>
+        </div>
+        <div class="row mt-12">
+          <button class="btn-secondary" onclick="renderDealScreen('details')">✏️ Enter details manually</button>
+          <label class="btn-primary" style="cursor:pointer">
+            📄 Try another file
+            <input type="file" accept=".pdf,.txt" style="display:none" onchange="handleUpload(event)">
+          </label>
+        </div>
+      </div>`;
+
+    // Drag and drop
+    const dz = document.getElementById('drop-zone');
+    if (dz) {
+      dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+      dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+      dz.addEventListener('drop', e => {
+        e.preventDefault(); dz.classList.remove('drag');
+        const f = e.dataTransfer.files[0];
+        if (f) handleUpload({ target: { files: [f], value: '' } });
+      });
+    }
+  }
+
+  else if (activeTab === 'details') {
+    body.innerHTML = `
+      <div class="row mb-16">
+        <h3 style="font-size:15px;font-weight:600">Offer Details</h3>
+        <div class="spacer"></div>
+        <button class="btn-primary" onclick="generateAll()">📅 Generate Timeline & Emails</button>
+      </div>
+      <div class="form-grid">
+        <div class="fg full"><label>Property Address</label><input type="text" id="f-address" placeholder="10120 West Kiehnau Ave, Milwaukee WI 53224"></div>
+        <div class="fg"><label>Unit #</label><input type="text" id="f-unit" placeholder="1"></div>
+        <div class="fg"><label>Condominium Name</label><input type="text" id="f-condo" placeholder="Royal Orleans"></div>
+        <div class="fg"><label>Buyer Name(s)</label><input type="text" id="f-buyer" placeholder="Full name"></div>
+        <div class="fg"><label>Seller Name(s)</label><input type="text" id="f-seller" placeholder="Name or company"></div>
+        <div class="fg"><label>Sale Price ($)</label><input type="text" id="f-price" placeholder="120000"></div>
+        <div class="fg"><label>Earnest Money ($)</label><input type="text" id="f-earnest" placeholder="1150"></div>
+        <div class="fg"><label>Loan Amount ($)</label><input type="text" id="f-loan" placeholder="116500"></div>
+        <div class="fg"><label>Loan Type</label><input type="text" id="f-loantype" placeholder="conventional / FHA / VA"></div>
+        <div class="fg"><label>Interest Rate (%)</label><input type="text" id="f-rate" placeholder="6.25"></div>
+        <div class="fg"><label>Acceptance Date</label><input type="date" id="f-accept"></div>
+        <div class="fg"><label>Closing Date</label><input type="date" id="f-close"></div>
+        <div class="fg"><label>Inspection Period (days)</label><input type="number" id="f-insp" placeholder="12"></div>
+        <div class="fg"><label>Appraisal Deadline (days)</label><input type="number" id="f-appr" placeholder="23"></div>
+        <div class="fg"><label>Financing Deadline (days)</label><input type="number" id="f-fin" placeholder="25"></div>
+        <div class="fg full"><label>Special Terms / Addendum</label><input type="text" id="f-addl" placeholder="e.g. Seller to repair windows and install screens at all windows"></div>
+      </div>
+      <div class="row mt-16">
+        <button class="btn-primary" onclick="generateAll()">📅 Generate Timeline & Emails</button>
+        <button class="btn-secondary" onclick="saveDeal()">💾 Save</button>
+        <button class="btn-danger" onclick="deleteDeal('${d.id}')">🗑 Delete Deal</button>
+      </div>`;
+    fillForm();
+  }
+
+  else if (activeTab === 'timeline') {
+    const tl = d.timeline || [];
+    body.innerHTML = `
+      <div class="row mb-16">
+        <h3 style="font-size:15px;font-weight:600">Transaction Timeline</h3>
+        <div class="spacer"></div>
+        ${tl.length ? `<button class="btn-secondary btn-sm" onclick="exportICS()">⬇ .ics</button>
+        <button class="btn-secondary btn-sm" onclick="doPrint()">🖨 Print</button>` : ''}
+      </div>
+      ${!tl.length ? `
+        <div class="banner warning">
+          <span class="banner-icon">📅</span>
+          <span>Fill in offer details and click "Generate Timeline & Emails" to populate this view.</span>
+        </div>
+        <button class="btn-primary" onclick="renderDealScreen('details')">Go to Details →</button>
+      ` : `
+        <div class="banner info" style="margin-bottom:14px">
+          <span class="banner-icon">📌</span>
+          <span>Acceptance: <strong>${fmtDate(d.acceptDate)}</strong> · Closing: <strong>${d.closeDate ? fmtDate(d.closeDate) : 'TBD'}</strong></span>
+        </div>
+        <div class="tl-list">
+          ${tl.map(item => `
+            <div class="tl-row ${item.pri}">
+              <div class="tl-date">${fmtDate(item.date)}</div>
+              <div>
+                <div class="tl-task">${item.task}
+                  ${item.agent   ? '<span class="badge b-agent">Agent</span>'  : ''}
+                  ${item.special ? '<span class="badge b-special">Addendum</span>' : ''}
+                  <span class="badge b-${item.pri}">${item.pri}</span>
+                </div>
+                <div class="tl-resp">${item.resp}</div>
+              </div>
+            </div>`).join('')}
+        </div>`}`;
+  }
+
+  else if (activeTab === 'emails') {
+    const em = d.emails || [];
+    body.innerHTML = `
+      <div class="row mb-16">
+        <h3 style="font-size:15px;font-weight:600">Email Templates</h3>
+        <div class="spacer"></div>
+        ${em.length ? `<button class="btn-secondary btn-sm" onclick="copyAllEmails()">📋 Copy all</button>` : ''}
+      </div>
+      ${!em.length ? `
+        <div class="banner warning">
+          <span class="banner-icon">✉️</span>
+          <span>Generate the timeline first to populate email templates.</span>
+        </div>
+        <button class="btn-primary" onclick="renderDealScreen('details')">Go to Details →</button>
+      ` : em.map((e, i) => `
+        <div class="email-card">
+          <div class="email-title">${e.title}</div>
+          <div class="email-subject">Subject: ${e.subject}</div>
+          <div class="email-body">${e.body}</div>
+          <div class="email-actions">
+            <button class="btn-secondary btn-sm copy-btn" onclick="copyEmail(${i})">📋 Copy</button>
+          </div>
+        </div>`).join('')}`;
+  }
+
+  else if (activeTab === 'pipeline') {
+    renderPipeline();
+  }
+};
+
+function renderPipeline() {
+  const body = document.getElementById('tab-body');
+  if (!body) return;
+  body.innerHTML = `
+    <div class="row mb-16">
+      <h3 style="font-size:15px;font-weight:600">Client Pipeline</h3>
+    </div>
+    <div class="pipeline">
+      ${STAGES.map(stage => {
+        const stagDeals = deals.filter(d => d.stage === stage);
+        return `
+          <div class="pipe-col" style="border-top:3px solid ${STAGE_COLORS[stage]}">
+            <div class="pipe-head">${STAGE_LABELS[stage]}<span class="pipe-count">${stagDeals.length}</span></div>
+            ${stagDeals.map(d => `
+              <div class="pipe-card" onclick="selectDeal('${d.id}')">
+                <div class="pipe-addr">${d.address || 'New Deal'}</div>
+                ${d.buyer  ? `<div class="pipe-buyer">${d.buyer}</div>` : ''}
+                ${d.price  ? `<div class="pipe-price">$${Number(d.price).toLocaleString()}</div>` : ''}
+                <div class="pipe-moves" onclick="event.stopPropagation()">
+                  ${STAGES.filter(s => s !== stage).map(s =>
+                    `<span class="pipe-move" onclick="moveDeal('${d.id}','${s}')">${STAGE_LABELS[s]}</span>`
+                  ).join('')}
+                </div>
+              </div>`).join('') || '<div style="font-size:11px;color:var(--ink4);padding:6px 2px">Empty</div>'}
+          </div>`;
+      }).join('')}
+    </div>
+    ${!deals.length ? '<div style="text-align:center;color:var(--ink4);font-size:13px;padding:24px">No deals yet — create or upload one to get started.</div>' : ''}`;
+}
+
+window.saveDeal = function() {
+  readForm();
+  render();
+};
+
+window.showBanner = function(type, msg) {
+  // Show a temporary banner in main content if possible
+  const mc = document.getElementById('main-content');
+  if (!mc) return;
+  const el = document.createElement('div');
+  el.className = `banner ${type}`;
+  el.style.cssText = 'position:fixed;top:68px;right:20px;max-width:380px;z-index:150;box-shadow:0 4px 16px rgba(0,0,0,.15)';
+  el.innerHTML = `<span>${msg}</span>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+};
+
+// ── API Key modal ─────────────────────────────────────────────────────────────
+window.openKeyModal = function() {
+  document.getElementById('key-modal').classList.add('open');
+  const inp = document.getElementById('key-input');
+  inp.value = getKey();
+  setTimeout(() => inp.focus(), 100);
+};
+window.closeKeyModal = function() {
+  document.getElementById('key-modal').classList.remove('open');
+};
+window.saveKey = function() {
+  const k = document.getElementById('key-input').value.trim();
+  if (!k) { alert('Please enter a key.'); return; }
+  localStorage.setItem(LS_KEY, k);
+  updateKeyBadge();
+  closeKeyModal();
+};
+function updateKeyBadge() {
+  const badge = document.getElementById('key-badge');
+  if (!badge) return;
+  if (getKey()) {
+    badge.textContent = '✓ API Key set';
+    badge.className = 'key-indicator key-set';
+  } else {
+    badge.textContent = '⚙ Set API Key';
+    badge.className = 'key-indicator key-missing';
+  }
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────
+function render() {
+  renderSidebar();
+  updateKeyBadge();
+  if (!deals.length || !currentId) {
+    renderWelcome();
+  } else {
+    const d = current();
+    if (d) renderDealScreen('details');
+  }
+}
+
+// ── Close modals on backdrop click ────────────────────────────────────────────
+document.querySelectorAll('.modal-backdrop').forEach(el => {
+  el.addEventListener('click', e => {
+    if (e.target === el) {
+      el.classList.remove('open');
+    }
+  });
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+load();
+if (deals.length) currentId = deals[0].id;
+render();
+
+</script>
+</body>
+</html>
