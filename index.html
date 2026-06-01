@@ -1301,7 +1301,7 @@ function renderWelcome() {
     <div class="welcome">
       <div class="welcome-icon">🏡</div>
       <h2>REI Transaction Manager</h2>
-      <p>Upload a Wisconsin purchase agreement PDF and Gemini AI will automatically extract all fields — no manual entry needed.</p>
+      <p>Upload a Wisconsin purchase agreement PDF — no manual entry needed.</p>
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
         <label class="btn-primary" style="cursor:pointer;padding:10px 20px">
           📄 Upload offer PDF
@@ -1311,10 +1311,8 @@ function renderWelcome() {
       </div>
       <div class="how-it-works mt-16">
         <div class="section-title" style="margin-bottom:10px">How it works</div>
-        <div class="how-step"><div class="step-num">1</div>Get your free Gemini API key at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--brand)">aistudio.google.com</a> — takes 1 minute</div>
         <div class="how-step"><div class="step-num">2</div>Click ⚙ API Key in the top bar and paste it in — saves to your browser</div>
         <div class="how-step"><div class="step-num">3</div>Upload any Wisconsin purchase agreement PDF — dotloop, Authentisign, anything</div>
-        <div class="how-step"><div class="step-num">4</div>Gemini reads the contract and extracts all fields automatically</div>
         <div class="how-step"><div class="step-num">5</div>Review, generate your timeline and emails, export to calendar</div>
         <div class="how-step" style="margin-top:6px;padding-top:10px;border-top:1px solid var(--paper3)">
           <div class="step-num" style="background:var(--brand3);color:var(--brand)">$</div>
@@ -1347,7 +1345,7 @@ window.renderDealScreen = function(activeTab) {
           <input type="file" accept=".pdf,.txt" onchange="handleUpload(event)">
           <div class="upload-icon">📄</div>
           <div class="upload-title">Drop your offer PDF here</div>
-          <div class="upload-sub">Wisconsin purchase agreements · dotloop · Authentisign · plain text<br>Gemini AI reads the contract and extracts all fields automatically</div>
+          <div class="upload-sub">Wisconsin purchase agreements · dotloop · Authentisign · plain text<br></div>
           <span class="upload-free">1,500 free requests/day</span>
         </div>
         <div class="banner info mt-16">
