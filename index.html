@@ -710,8 +710,8 @@ async function callGroq(text) {
       model: 'llama-3.3-70b-versatile',
       temperature: 0,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: 'CONTRACT TEXT:\n' + text.slice(0, 60000) }
+        { : 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: 'CONTRACT TEXT:\n' + text.slice(0, 45000) }
       ]
     })
   });
