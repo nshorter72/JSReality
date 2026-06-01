@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>REI Transaction Manager — Jenean Shorter</title>
+<title>REI Transaction Manager — Shorter Investments</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs" type="module" id="pdfjs-script"></script>
@@ -564,14 +564,14 @@ input.prefilled { background: var(--brand3); border-color: #9FE1CB; }
 <!-- API Key Modal -->
 <div class="modal-backdrop" id="key-modal">
   <div class="modal">
-    <h3>🔑 Gemini API Key</h3>
+    <h3>🔑 Groq API Key</h3>
     <p>
-      Your key is saved in your browser only — never sent anywhere except Google's API.<br><br>
-      Get a <strong>free key</strong> at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--brand)">aistudio.google.com</a> — 1,500 free requests/day, no credit card needed.
+      Your key is saved in your browser only — never sent anywhere except Groq's API.<br><br>
+      Get a <strong>free key</strong> (no credit card) at <a href="https://console.groq.com/keys" target="_blank" style="color:var(--brand)">console.groq.com/keys</a> — generous free tier, resets every minute rather than per-day.
     </p>
     <div class="fg">
-      <label>Gemini API Key</label>
-      <input type="password" id="key-input" placeholder="AIza..." autocomplete="off">
+      <label>Groq API Key</label>
+      <input type="password" id="key-input" placeholder="gsk_..." autocomplete="off">
     </div>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeKeyModal()">Cancel</button>
@@ -613,7 +613,7 @@ initPDFJS();
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const LS_DEALS = 'rei_deals_v3';
-const LS_KEY   = 'rei_gemini_key';
+const LS_KEY   = 'rei_groq_key';
 const STAGES   = ['active','under_contract','clear_to_close','closed'];
 const STAGE_LABELS = {
   active: 'Active',
@@ -654,10 +654,10 @@ function emptyDeal(addr = '') {
   };
 }
 
-// ── Gemini extraction ─────────────────────────────────────────────────────────
+// ── Groq extraction ───────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are a real estate contract data extractor.
 Extract these fields from the Wisconsin purchase agreement text below.
-Return ONLY a valid JSON object — no markdown, no explanation.
+Return ONLY a valid JSON object — no markdown, no explanation, no backticks.
 
 Fields:
 - address: full street address string
@@ -681,42 +681,39 @@ Rules:
 - Use "" for any field not found
 - Dates MUST be YYYY-MM-DD format
 - Price/money fields: digits only, no $ or commas
-- Days fields: plain integer string only`;
+- Days fields: plain integer string only
+- Output ONLY the raw JSON object, nothing else`;
 
-async function callGemini(text) {
+async function callGroq(text) {
   const apiKey = getKey();
   if (!apiKey) throw new Error('NO_KEY');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-  const body = {
-    contents: [{
-      parts: [{
-        text: SYSTEM_PROMPT + '\n\nCONTRACT TEXT:\n' + text.slice(0, 60000)
-      }]
-    }],
-    generationConfig: {
-      temperature: 0,
-      responseMimeType: 'application/json'
-    }
-  };
-
-  const resp = await fetch(url, {
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: 'CONTRACT TEXT:\n' + text.slice(0, 60000) }
+      ]
+    })
   });
 
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
     const msg = err?.error?.message || `HTTP ${resp.status}`;
-    if (resp.status === 400 && msg.includes('API_KEY')) throw new Error('BAD_KEY');
+    if (resp.status === 401) throw new Error('BAD_KEY');
     if (resp.status === 429) throw new Error('QUOTA');
     throw new Error(msg);
   }
 
   const data = await resp.json();
-  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const raw = data?.choices?.[0]?.message?.content || '{}';
   const clean = raw.replace(/```json|```/gi, '').trim();
   return JSON.parse(clean);
 }
@@ -744,7 +741,7 @@ window.handleUpload = async function(e) {
 
   if (!getKey()) {
     openKeyModal();
-    showBanner('warning', '⚠️ Set your Gemini API key first, then upload again.');
+    showBanner('warning', '⚠️ Set your Groq API key first, then upload again.');
     return;
   }
 
@@ -764,10 +761,10 @@ window.handleUpload = async function(e) {
     if (file.name.toLowerCase().endsWith('.pdf')) {
       updateProgress(20, 'Reading PDF pages…');
       text = await extractPDFText(file);
-      updateProgress(50, 'Text extracted — sending to Gemini…');
+      updateProgress(50, 'Text extracted — sending to Groq AI…');
     } else {
       text = await file.text();
-      updateProgress(50, 'Sending to Gemini…');
+      updateProgress(50, 'Sending to Groq AI…');
     }
 
     if (!text.trim() || text.trim().length < 50) {
@@ -775,8 +772,8 @@ window.handleUpload = async function(e) {
       return;
     }
 
-    updateProgress(70, 'Gemini is reading the contract…');
-    const result = await callGemini(text);
+    updateProgress(70, 'Groq AI is reading the contract…');
+    const result = await callGroq(text);
     updateProgress(100, 'Done!');
 
     extractedPreview = result;
@@ -784,11 +781,11 @@ window.handleUpload = async function(e) {
 
   } catch(err) {
     if (err.message === 'NO_KEY') {
-      showExtractFailed('No API key set. Click "⚙ API Key" at the top to add your free Gemini key.');
+      showExtractFailed('No API key set. Click "⚙ API Key" at the top to add your free Groq key.');
     } else if (err.message === 'BAD_KEY') {
-      showExtractFailed('Invalid API key. Double-check it at aistudio.google.com/app/apikey');
+      showExtractFailed('Invalid API key. Double-check it at console.groq.com/keys');
     } else if (err.message === 'QUOTA') {
-      showExtractFailed('Gemini free quota exceeded (1,500/day). Try again tomorrow or upgrade.');
+      showExtractFailed('Groq rate limit hit. Wait a moment and try again — free tier resets quickly.');
     } else {
       showExtractFailed('Extraction error: ' + err.message);
     }
