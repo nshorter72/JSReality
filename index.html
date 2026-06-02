@@ -531,7 +531,7 @@ input.prefilled { background: var(--brand3); border-color: #9FE1CB; }
       </div>
     </div>
     <div class="top-right">
-      <span id="key-badge" class="key-indicator key-missing" onclick="openKeyModal()">⚙ API Key</span>
+      <span id="key-badge" class="key-indicator key-missing" onclick="openKeyModal()">⚙ Set Groq Key</span>
       <button class="btn-secondary btn-sm" onclick="showNewDealModal()">+ New Deal</button>
       <label class="btn-primary btn-sm" style="cursor:pointer">
         📄 Upload PDF
@@ -710,7 +710,7 @@ async function callGroq(text) {
       model: 'llama-3.3-70b-versatile',
       temperature: 0,
       messages: [
-        { : 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: 'CONTRACT TEXT:\n' + text.slice(0, 45000) }
       ]
     })
@@ -1350,7 +1350,7 @@ window.renderDealScreen = function(activeTab) {
         </div>
         <div class="banner info mt-16">
           <span class="banner-icon">💡</span>
-          <span>Make sure you've set your <strong>Gemini API key</strong> — click ⚙ API Key at the top. It's free and takes 60 seconds to get.</span>
+          <span>Make sure your <strong>Groq API key</strong> is set — click ⚙ API Key at the top.</span>
         </div>
       </div>
       <div id="extract-processing" style="display:none">
@@ -1604,9 +1604,14 @@ document.querySelectorAll('.modal-backdrop').forEach(el => {
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-load();
-if (deals.length) currentId = deals[0].id;
-render();
+try {
+  load();
+  if (deals.length) currentId = deals[0].id;
+  render();
+  console.log('[JSReality] boot ok');
+} catch (error) {
+  console.error('[JSReality] boot error', error);
+}
 
 </script>
 </body>

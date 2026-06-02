@@ -1,17 +1,17 @@
 # REI Transaction Manager
 **JS Reality LLC** — Post-offer pipeline, automated timeline & email templates
 
-Reads Wisconsin purchase agreements (dotloop, Authentisign, any PDF) using Gemini AI and auto-extracts all contract fields.
+Reads Wisconsin purchase agreements (dotloop, Authentisign, any PDF) using Groq and auto-extracts all contract fields.
 
 ---
 
 ## Deploy to GitHub Pages in 5 minutes
 
-### Step 1 — Get your free Gemini API key
-1. Go to [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
+### Step 1 — Get your free Groq API key
+1. Go to [console.groq.com/keys](https://console.groq.com/keys)
 2. Sign in with your Google account
 3. Click **Create API key** → copy it
-4. Free tier: **1,500 requests/day** — no credit card needed
+4. Free tier: generous rate limits, no credit card needed
 
 ### Step 2 — Create the GitHub repo
 1. Go to [github.com](https://github.com) and sign in (create free account if needed)
@@ -35,15 +35,15 @@ Reads Wisconsin purchase agreements (dotloop, Authentisign, any PDF) using Gemin
    `https://YOUR-USERNAME.github.io/rei-transactions/`
 
 ### Step 5 — Share with your partner
-Send her the URL. She opens it, clicks **⚙ Set API Key**, and enters her own free Gemini key (or you can share one key — the free tier is per key, not per user).
+Send her the URL. She opens it, clicks **⚙ Set API Key**, and enters her own free Groq key (or you can share one key — the free tier is per key, not per user).
 
 ---
 
 ## How it works
 
-1. Click **⚙ API Key** → paste your Gemini key (saves to browser, never leaves your machine)
+1. Click **⚙ API Key** → paste your Groq key (saves to browser, never leaves your machine)
 2. Click **Upload PDF** → drop any Wisconsin purchase agreement
-3. Gemini reads the contract and extracts all fields automatically
+3. Groq reads the contract and extracts all fields automatically
 4. Review extraction results, click **Apply to Deal**
 5. Hit **Generate Timeline & Emails** for the full deadline schedule
 6. Export to `.ics` (imports into Google Calendar, Outlook, Apple Calendar)
@@ -60,9 +60,9 @@ Send her the URL. She opens it, clicks **⚙ Set API Key**, and enters her own f
 - `.txt` files if PDF is scanned ✓
 
 ## Cost
-- **$0** — Gemini free tier covers 1,500 contracts/day
+- **$0** — Groq free tier covers ample daily volume
 - Each contract extraction = ~1 API call (~8,000 tokens)
-- Upgrade to Gemini paid if you ever need more volume
+- Upgrade to Groq paid if you ever need more volume
 
 ---
 
